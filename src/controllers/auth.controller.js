@@ -62,6 +62,8 @@ async function userLoginController(req, res){
 
 const token = jwt.sign({userId: user._id}, process.env.JWT_SECRET, {expiresIn: "3d"})
 
+res.cookie("token", token);
+
 await emailService.sendLoginEmail(user.email, user.name, {
     time: new Date().toLocaleString(),
     device: req.headers['user-agent'],
