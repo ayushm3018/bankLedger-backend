@@ -68,9 +68,31 @@ async function sendLoginEmail(userEmail, name, loginInfo) {
     await sendEmail(userEmail, subject, text, html);
 }
 
+async function sendTransactionAlertEmail(userEmail, name, amount, toAccount) {
+    const subject = "Transaction Alert";
+    const text = `Hello ${name},\n\nA transaction of $${amount} was made from your account to account ${toAccount}.\n.\n\nBest regards,\nBackend Ledger Team`;
+    const html = `
+        <h2>Hello ${name},</h2>
+        <p>A transaction of <strong>$${amount}</strong> was made from your account to account <strong>${toAccount}</strong>.</p>
+        <p style="color: red;"></p>
+        <p>Best regards,<br>Backend Ledger Team</p>
+    `;
+    await sendEmail(userEmail, subject, text, html);
+}
+
+async function sendTransactionFailureEmail(userEmail, name, amount, toAccount) {
+    const subject = "Transaction Failed";
+    const text = `Hello ${name},\n\nA transaction of $${amount} to account ${toAccount} has failed.\n.\n\nBest regards,\nBackend Ledger Team`;
+    const html = `
+        <h2>Hello ${name},</h2>
+        <p>A transaction of <strong>$${amount}</strong> to account <strong>${toAccount}</strong> has failed.</p>
+        <p style="color: red;"></p>
+        <p>Best regards,<br>Backend Ledger Team</p>
+    `;
+    await sendEmail(userEmail, subject, text, html);
+}
 
 
-
-module.exports = { transporter, sendEmail, sendRegistrationEmail, sendLoginEmail };
+module.exports = { transporter, sendEmail, sendRegistrationEmail, sendLoginEmail, sendTransactionAlertEmail, sendTransactionFailureEmail };
 
 
