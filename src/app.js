@@ -1,22 +1,64 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 
+/**
+ * - Security & logging middleware
+ */
+app.use(helmet());
+app.use(cors({ origin: true, credentials: true }));
+app.use(morgan("dev"));
+
+/**
+ * - Body & cookie parsers
+ */
 app.use(express.json());
 app.use(cookieParser());
 
 /**
- * - Routes required 
+ * - Rate limiter for auth routes (5 attempts per 15 minutes)
+ */
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: "Too many auth attempts, please try again later" }
+});
+
+/**
+ * - Routes required
  */
 const authRouter = require("./routes/auth.routes");
 const accountRouter = require("./routes/account.routes");
+const transactionRouter = require("./routes/transaction.routes");
 
 /**
  * - Use Routes
  */
-
-app.use("/api/auth", authRouter);
+app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/accounts", accountRouter);
+app.use("/api/transactions", transactionRouter);
 
-module.exports = app; 
+
+/**
+ * - 404 handler (must come after all routes)
+ */
+app.use((req, res) => {
+    res.status(404).json({ message: "Route not found" });
+});
+
+/**
+ * - Global error handler (must come after all routes and middleware)
+ */
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(err.status || 500).json({
+        message: err.message || "Something went wrong"
+    });
+});
+
+module.exports = app;
