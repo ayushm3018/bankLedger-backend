@@ -21,6 +21,12 @@ const accountSchema = new mongoose.Schema({
         required: [true, "Currency is required for creating an account"], 
         default: "INR"
     },
+    systemUser:{
+        type: Boolean,
+        default: false,
+        immutable: true, //as system accounts should not be changed once created, we can set it as immutable to prevent accidental updates to the systemUser flag after the account is created. 
+        select: false
+    }
     
 }, {
     timestamps: true

@@ -22,23 +22,25 @@ const userSchema = new mongoose.Schema({
         required: [true, "Password is required for creating an account"],
         minlength:[6, "password should contain atleast 6 characters"],
         select: false
+     },
+
+     systemUser: {
+        type: Boolean,
+        default: false,
+        select: false,
+        immutable: true
      }
 },{
     timestamps: true
 }
 )
 
-//see whats happening below later
-userSchema.pre("save", async function (next){
-    if(!this.isModified("password")){
-        return next();
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) {
+        return;
     }
-    const hash = await bcrypt.hash(this.password, 10)
-    
-    this.password = hash
-
-    return next();
-})
+    this.password = await bcrypt.hash(this.password, 10);
+});
 
 userSchema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password, this.password)
