@@ -39,6 +39,11 @@ const transactionRouter = require("./routes/transaction.routes");
 /**
  * - Use Routes
  */
+
+app.get("/", (req, res) => {
+    res.status(200).json({ message: "Welcome to the Banking Ledger API, its up and running" })
+});
+
 app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/accounts", accountRouter);
 app.use("/api/transactions", transactionRouter);

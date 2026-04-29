@@ -110,12 +110,15 @@ async function createTransaction(req, res){
      * 5. Create transaction with status PENDING
      */
 
+    let transaction; //declaring here to use in catch block in case of transaction failure, so that we can update the transaction status to FAILED in case of any error during transaction processing.
+    try{
+
  const session = await mongoose.startSession();
  session.startTransaction();
 
- const transaction = await transactionModel.create({
+ const transaction = (await transactionModel.create([{
     fromAccount, toAccount, amount, idempotencyKey, status: "PENDING"
- }, {session})
+ }], {session}))[0];
  
  const debitLedgerEntry = await ledgerModel.create({
     account: fromAccount,
@@ -131,18 +134,31 @@ async function createTransaction(req, res){
     transaction: transaction._id
  }, {session})
 
- transaction.status = "COMPLETED";
+await transactionModel.findByIdAndUpdate(
+    {id:transaction._id}, 
+    {status: "COMPLETED"},
+     {session}
+    )   
 
- await transaction.save({session})
 
  await session.commitTransaction();
  session.endSession();
-
+    } catch(error){
+        await transactionModel.findByIdAndUpdate(
+            {id:transaction._id}, 
+            {status: "FAILED"},
+             {session}
+            )   
+        return res.status(400).json({
+            message: "Transaction is pending, you can retry the transaction after sometime",
+            transaction: transaction
+        })
+    }
  /**
   * 10. Send notification emails to sender and receiver
   */
 
- await emailService.sendTransactionAlertEmail(req.user.email, req.user.name, amount, fromUserAccount._id, toUserAccount._id)
+ await emailService.sendTransactionAlertEmail(req.user.email, req.user.name, amount, toUserAccount._id)
 
  res.status(201).json({
     message: "Transaction successful",
@@ -151,6 +167,83 @@ async function createTransaction(req, res){
 
 }
 
+async function createInitialFundsTransaction(req, res){
+    const {toAccount, amount, idempotencyKey} = req.body;
+
+    if(!toAccount || !amount || !idempotencyKey){
+      return res.status(400).json({
+            message: "Missing required fields: toAccount, amount, idempotencyKey, all are required"
+        })
+    }
+    const toUserAccount = await accountModel.findOne({
+        _id: toAccount
+    })
+
+    if(!toUserAccount){
+        return res.status(404).json({
+            message: "Invalid toAccount"
+        })
+    }
+
+    if(toUserAccount.status !== "ACTIVE"){
+        return res.status(400).json({
+            message : "toAccount must be ACTIVE to process transaction"
+        })
+    }
+
+    const fromUserAccount = await accountModel.findOne({
+        user: req.user._id
+    })
+
+    if(!fromUserAccount){
+        return res.status(404).json({
+            message: "System account not found for user"
+        })
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const [transaction] = await transactionModel.create([{
+            fromAccount: fromUserAccount._id,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: "PENDING"
+        }], { session });
+
+        await ledgerModel.create([{
+            account: fromUserAccount._id,
+            amount: amount,
+            transaction: transaction._id,
+            type: "DEBIT"
+        }], { session });
+
+        await ledgerModel.create([{
+            account: toAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "CREDIT"
+        }], { session });
+
+        transaction.status = "COMPLETED";
+        await transaction.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(201).json({
+            message: "Transaction successful",
+            transaction: transaction
+        });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        throw err;
+    }
+}
+
 module.exports = {
-    createTransaction
+    createTransaction, createInitialFundsTransaction
 }
