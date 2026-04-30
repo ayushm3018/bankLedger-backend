@@ -1,7 +1,7 @@
 const userModel = require("../models/user.model")
 const jwt = require("jsonwebtoken")
 const emailService = require("../services/email.service")
-const tokenBlacklistModel = require("../models/tokenBlacklist.model")
+const tokenBlacklistModel = require("../models/blacklistToken.model")
 
 
 async function userRegisterController(req, res){

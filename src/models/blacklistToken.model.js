@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { expires } = require("mongoose/lib/utils");
 
 const blacklistTokenSchema = new mongoose.Schema({
     token: {
@@ -11,13 +10,13 @@ const blacklistTokenSchema = new mongoose.Schema({
     blacklistedAt: {
         type: Date,
         default: Date.now,
-        imMutable: true
+        immutable: true
     }
-}, {timestamps: true})
+}, { timestamps: true });
 
-tokenBlacklistSchema.index({createdAt: 1}, {
-    expires: 60 * 60 * 48 // Set the TTL to 48 hours (in seconds)
-})  //indexing the token field to optimize search queries when checking if a token is blacklisted. This allows for faster lookups and improved performance when validating tokens against the blacklist.            
+blacklistTokenSchema.index({ createdAt: 1 }, {
+    expireAfterSeconds: 60 * 60 * 48 // TTL: auto-delete after 48 hours
+});
 
 const blacklistTokenModel = mongoose.model("blacklistToken", blacklistTokenSchema);
 

@@ -98,7 +98,7 @@ async function createTransaction(req, res){
     /**
      * 4. Derive sender balance from ledger
      */
-    const balance = await toUserAccount.getBalance();
+    const balance = await fromUserAccount.getBalance();
 
     if(balance < amount){
         return res.status(400).json({
@@ -110,49 +110,53 @@ async function createTransaction(req, res){
      * 5. Create transaction with status PENDING
      */
 
-    let transaction; //declaring here to use in catch block in case of transaction failure, so that we can update the transaction status to FAILED in case of any error during transaction processing.
-    try{
+    let transaction;
+    let session;
+    try {
+        session = await mongoose.startSession();
+        session.startTransaction();
 
- const session = await mongoose.startSession();
- session.startTransaction();
+        transaction = (await transactionModel.create([{
+            fromAccount, toAccount, amount, idempotencyKey, status: "PENDING"
+        }], { session }))[0];
 
- const transaction = (await transactionModel.create([{
-    fromAccount, toAccount, amount, idempotencyKey, status: "PENDING"
- }], {session}))[0];
- 
- const debitLedgerEntry = await ledgerModel.create({
-    account: fromAccount,
-    amount,
-    type: "DEBIT",
-    transaction: transaction._id
- }, {session})  
+        await ledgerModel.create([{
+            account: fromAccount,
+            amount,
+            type: "DEBIT",
+            transaction: transaction._id
+        }], { session });
 
- const creditLedgerEntry = await ledgerModel.create({
-    account: toAccount,
-    amount,
-    type: "CREDIT",
-    transaction: transaction._id
- }, {session})
+        await ledgerModel.create([{
+            account: toAccount,
+            amount,
+            type: "CREDIT",
+            transaction: transaction._id
+        }], { session });
 
-await transactionModel.findByIdAndUpdate(
-    {id:transaction._id}, 
-    {status: "COMPLETED"},
-     {session}
-    )   
-
-
- await session.commitTransaction();
- session.endSession();
-    } catch(error){
         await transactionModel.findByIdAndUpdate(
-            {id:transaction._id}, 
-            {status: "FAILED"},
-             {session}
-            )   
-        return res.status(400).json({
-            message: "Transaction is pending, you can retry the transaction after sometime",
+            transaction._id,
+            { status: "COMPLETED" },
+            { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+    } catch (error) {
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
+        if (transaction) {
+            await transactionModel.findByIdAndUpdate(
+                transaction._id,
+                { status: "FAILED" }
+            );
+        }
+        return res.status(500).json({
+            message: "Transaction failed, you can retry the transaction after sometime",
             transaction: transaction
-        })
+        });
     }
  /**
   * 10. Send notification emails to sender and receiver
