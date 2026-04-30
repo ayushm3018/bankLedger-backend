@@ -11,6 +11,7 @@ const options = {
                 "A double-entry ledger banking API. Money transfers are atomic (MongoDB transactions) and idempotent (clients pass an idempotencyKey to safely retry).",
         },
         servers: [
+            { url: "https://bankledger-backend-lhhg.onrender.com", description: "Production" },
             { url: "http://localhost:3000", description: "Local development" },
         ],
         components: {

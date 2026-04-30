@@ -26,15 +26,14 @@ Built to explore the design problems most CRUD tutorials skip: how do you derive
 
 ## Live Demo
 
-> **TODO:** populate after Render deploy.
-
 | | |
 |---|---|
-| API base | `https://<your-app>.onrender.com` |
-| Interactive docs | `https://<your-app>.onrender.com/api-docs` |
-| Raw OpenAPI spec | `https://<your-app>.onrender.com/api-docs.json` |
+| API base | https://bankledger-backend-lhhg.onrender.com |
+| Interactive docs | https://bankledger-backend-lhhg.onrender.com/api-docs |
+| Raw OpenAPI spec | https://bankledger-backend-lhhg.onrender.com/api-docs.json |
 
-Free-tier hosts cold-start; first request after idle may take ~30s.
+> [!NOTE]
+> Hosted on Render's free tier — services spin down after 15 min of inactivity. The first request after idle may take ~30–50s while the container wakes up.
 
 ---
 
