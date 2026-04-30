@@ -4,6 +4,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
 
 const app = express();
 
@@ -40,9 +42,17 @@ const transactionRouter = require("./routes/transaction.routes");
  * - Use Routes
  */
 
-app.get("/", (req, res) => {
+app
+.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome to the Banking Ledger API, its up and running" })
 });
+
+/**
+ * - API documentation (Swagger UI)
+ * - Interactive docs at /api-docs, raw OpenAPI spec at /api-docs.json
+ */
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
 
 app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/accounts", accountRouter);
